@@ -1,0 +1,562 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Weather Consensus</title>
+<style>
+:root{--bg:#f4f6f9;--card:#fff;--text:#1b2430;--muted:#66758a;--accent:#2b6cb0;--ok:#2f855a;--warn:#b7791f;--bad:#c53030;--line:#e2e8f0;--chip:#edf2f7;--okbg:#e6f4ec;--warnbg:#fbf1dc;--badbg:#fbe6e6}
+@media (prefers-color-scheme:dark){:root{--bg:#0f141a;--card:#18202a;--text:#e6edf5;--muted:#8fa1b5;--accent:#63a4e8;--ok:#58c08a;--warn:#f0b35e;--bad:#f2777a;--line:#27323f;--chip:#222c38;--okbg:#14301f;--warnbg:#3a2e14;--badbg:#3b1c1e}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+.wrap{max-width:640px;margin:0 auto;padding:16px 16px 40px}
+h1{font-size:1.35rem;margin:0}
+h2{font-size:1rem;margin:0 0 8px}
+.sub{color:var(--muted);font-size:.9rem;margin-bottom:12px}
+.muted{color:var(--muted);font-size:.85rem}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin:12px 0}
+.search{display:flex;gap:6px}
+.search input{flex:1;min-width:0;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--text);font-size:1rem}
+button{font:inherit;color:var(--text);background:var(--chip);border:1px solid var(--line);border-radius:10px;padding:8px 12px;cursor:pointer}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+#results button{display:block;width:100%;text-align:left;margin-top:6px;background:var(--card)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 0}
+.lc{display:inline-flex;border:1px solid var(--line);border-radius:999px;background:var(--chip);overflow:hidden}
+.lc.on{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.lc button{border:0;border-radius:0;background:transparent;padding:5px 11px;font-size:.88rem}
+.lc .x{padding:5px 9px 5px 2px;color:var(--muted)}
+.banner{background:var(--warnbg);color:var(--warn);border-radius:10px;padding:8px 12px;margin:12px 0;font-size:.9rem}
+.headline{font-size:1.25rem;font-weight:650}
+.big{font-size:2.2rem;font-weight:700;line-height:1}
+.nowrow{display:flex;justify-content:space-between;align-items:flex-end;gap:10px}
+.strip{display:flex;gap:2px;overflow-x:auto;margin-top:12px;padding-bottom:4px}
+.hr{flex:1 0 44px;text-align:center;font-size:.8rem}
+.hl{color:var(--muted)}
+.hi{height:22px}
+.bar{height:34px;width:10px;margin:2px auto;background:var(--chip);border-radius:5px;display:flex;align-items:flex-end;overflow:hidden}
+.bar span{display:block;width:100%;background:var(--accent)}
+.day{border-top:1px solid var(--line);padding:10px 0;cursor:pointer}
+.day:first-of-type{border-top:0}
+.dh{display:flex;align-items:center;gap:8px}
+.dn{width:84px;font-weight:600}
+.dv{flex:1}
+.dt{font-variant-numeric:tabular-nums;white-space:nowrap}
+.chip{display:inline-block;font-size:.72rem;padding:2px 8px;border-radius:999px;background:var(--chip);color:var(--muted);margin-left:4px;white-space:nowrap}
+.chip.ok{background:var(--okbg);color:var(--ok)}
+.chip.warn{background:var(--warnbg);color:var(--warn)}
+.chip.bad{background:var(--badbg);color:var(--bad)}
+.tl{display:inline-flex;align-items:center;gap:6px;font-size:.74rem;color:var(--muted);margin-left:6px;white-space:nowrap;vertical-align:middle}
+.lamps{display:inline-flex;gap:3px;background:#2b2f36;padding:3px 5px;border-radius:999px}
+.lamps b{width:9px;height:9px;border-radius:50%;background:#58606b;opacity:.5}
+.lamps .r.on{background:#f0453a;opacity:1;box-shadow:0 0 5px #f0453a}
+.lamps .a.on{background:#f6ad2d;opacity:1;box-shadow:0 0 5px #f6ad2d}
+.lamps .g.on{background:#34c36b;opacity:1;box-shadow:0 0 5px #34c36b}
+.fitrow{padding:8px 0;border-top:1px solid var(--line)}
+.fitrow:first-of-type{border-top:0}
+.piece{display:inline-block;background:var(--chip);border-radius:999px;padding:4px 12px;margin:6px 6px 0 0;font-weight:600}
+.piece.maybe{background:transparent;border:1px dashed var(--muted);font-weight:500}
+table{width:100%;border-collapse:collapse;font-size:.85rem;margin-top:8px;font-variant-numeric:tabular-nums}
+th,td{padding:5px 4px;text-align:right;border-bottom:1px solid var(--line)}
+th:first-child,td:first-child{text-align:left}
+th{color:var(--muted);font-weight:500}
+tr.dis td{background:var(--warnbg)}
+td.out{color:var(--bad);font-weight:600}
+.detail{margin-top:6px}
+select{font:inherit;padding:6px 8px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--text)}
+label.row{display:flex;align-items:center;gap:8px;padding:4px 0}
+footer{color:var(--muted);font-size:.78rem;margin-top:20px}
+a{color:var(--accent)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Weather Consensus</h1>
+  <div class="sub" id="locname"></div>
+  <form id="sf" class="search">
+    <input id="q" type="search" placeholder="Search a place…" autocomplete="off">
+    <button class="primary" type="submit">Search</button>
+    <button type="button" id="geo" title="Use my location" aria-label="Use my location">📍</button>
+  </form>
+  <div id="results"></div>
+  <div id="chips" class="chips"></div>
+  <div id="app"><div class="card muted">Loading…</div></div>
+  <footer>
+    Forecast data from <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a> (CC BY 4.0), combining the Met Office, ECMWF, NOAA GFS, DWD ICON and Météo-France models.
+    "Observed" values used for accuracy tracking are Open-Meteo's best-estimate analysis, not weather-station readings.
+  </footer>
+</div>
+
+<script>
+'use strict';
+
+/* ---------- config ---------- */
+const MODELS = [
+  {id:'ukmo_seamless',        name:'Met Office'},
+  {id:'ecmwf_ifs025',         name:'ECMWF'},
+  {id:'gfs_seamless',         name:'NOAA GFS'},
+  {id:'icon_seamless',        name:'DWD ICON'},
+  {id:'meteofrance_seamless', name:'Météo-France'}
+];
+const MODEL_NAME = Object.fromEntries(MODELS.map(m => [m.id, m.name]));
+const WET_DAY = 1.0;     // mm/day counted as a rainy day
+const WET_HOUR = 0.2;    // mm/hour counted as rain
+const MIN_SCORED = 5;    // scored days before a model's accuracy is used for weighting
+const ACTIVITIES = {
+  none:    {label:'Choose an activity…'},
+  cycling: {label:'Cycling',     test:h => !h.rain && h.wind <= 15 && h.gust <= 28 && h.t >= 3},
+  running: {label:'Running',     test:h => !h.rain && h.t >= 2 && h.t <= 20 && h.gust <= 35},
+  walking: {label:'Walking',     test:h => !h.rain && h.gust <= 40 && h.t >= 0},
+  washing: {label:'Washing out', test:h => h.wetFrac === 0 && h.wind >= 3 && h.t >= 5, min:3}
+};
+
+/* ---------- helpers ---------- */
+const $ = s => document.querySelector(s);
+const store = {
+  get(k, d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+};
+const mean = a => a.reduce((x, y) => x + y, 0) / a.length;
+const median = a => { const s = [...a].sort((x, y) => x - y), m = Math.floor(s.length / 2); return s.length % 2 ? s[m] : (s[m-1] + s[m]) / 2; };
+const rnd = (v, d = 0) => { const f = 10 ** d; return Math.round(v * f) / f; };
+const pad = n => String(n).padStart(2, '0');
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const locKey = l => l.lat.toFixed(2) + ',' + l.lon.toFixed(2);
+const fmtMm = v => (v < 10 ? rnd(v, 1) : rnd(v)) + ' mm';
+const fmtW = w => `${pad(w.startHr)}:00–${pad(w.endHr % 24)}:00`;
+const g = (obj, key, id, i) => { const a = obj[key + '_' + id]; if(!a) return null; const v = a[i]; return (v === null || v === undefined) ? null : v; };
+function central(vals, ids, W){
+  if(W){ let s = 0, t = 0; vals.forEach((v, i) => { const w = W[ids[i]] || 1; s += v * w; t += w; }); return s / t; }
+  return median(vals);
+}
+function dayLabel(dateStr, i){
+  if(i === 0) return 'Today';
+  if(i === 1) return 'Tomorrow';
+  return new Date(dateStr + 'T12:00:00Z').toLocaleDateString('en-GB', {weekday:'short', day:'numeric', timeZone:'UTC'});
+}
+
+/* ---------- state ---------- */
+const DEFAULT_LOC = {name:'London, UK', lat:51.5072, lon:-0.1276};
+let saved = store.get('wc_locs', null) || [DEFAULT_LOC];
+let cur = store.get('wc_cur', null) || saved[0];
+const settings = Object.assign({models:MODELS.map(m => m.id), weighting:false, activity:'none'}, store.get('wc_settings', {}));
+const state = {j:null, offline:null, openDay:null, toast:''};
+
+/* ---------- consensus: hourly ---------- */
+function buildHours(j, active, W){
+  return j.hourly.time.map((time, i) => {
+    const per = [];
+    active.forEach(id => {
+      const t = g(j.hourly, 'temperature_2m', id, i), p = g(j.hourly, 'precipitation', id, i);
+      const w = g(j.hourly, 'wind_speed_10m', id, i), gu = g(j.hourly, 'wind_gusts_10m', id, i);
+      if(t != null && p != null) per.push({id, t, p, w:w ?? 0, gu:gu ?? 0});
+    });
+    if(per.length < 2) return {time, ok:false};
+    const ids = per.map(x => x.id);
+    let wet = 0, dry = 0;
+    per.forEach(x => { const w = W ? (W[x.id] || 1) : 1; if(x.p >= WET_HOUR) wet += w; else dry += w; });
+    const wetList = per.filter(x => x.p >= WET_HOUR);
+    const rain = wet > dry;
+    const group = rain ? wetList : per.filter(x => x.p < WET_HOUR);
+    return {
+      time, ok:true, n:per.length, rain,
+      wetFrac: wetList.length / per.length,
+      mm: mean(group.map(x => x.p)),
+      t: central(per.map(x => x.t), ids, W),
+      wind: median(per.map(x => x.w)),
+      gust: median(per.map(x => x.gu))
+    };
+  });
+}
+
+function windows(hours, pred, s = 0, e = 24, minLen = 1){
+  const out = []; let cur = null;
+  hours.forEach((h, i) => {
+    const hr = +h.time.slice(11, 13);
+    const ok = h.ok && hr >= s && hr < e && pred(h);
+    if(ok){
+      if(cur && cur.last === i - 1){ cur.last = i; cur.endHr = hr + 1; }
+      else { cur = {first:i, last:i, startHr:hr, endHr:hr + 1}; out.push(cur); }
+    }
+  });
+  return out.filter(w => w.last - w.first + 1 >= minLen);
+}
+
+/* ---------- consensus: daily ---------- */
+function buildDays(j, active, W){
+  return j.daily.time.map((date, di) => {
+    const per = [];
+    active.forEach(id => {
+      const hi = g(j.daily, 'temperature_2m_max', id, di), lo = g(j.daily, 'temperature_2m_min', id, di);
+      const p = g(j.daily, 'precipitation_sum', id, di), w = g(j.daily, 'wind_speed_10m_max', id, di);
+      if(hi != null && lo != null && p != null) per.push({id, hi, lo, p, w});
+    });
+    if(per.length < 2) return {date, di, ok:false, n:per.length};
+    const ids = per.map(x => x.id);
+    let wet = 0, dry = 0;
+    per.forEach(x => { const w = W ? (W[x.id] || 1) : 1; if(x.p >= WET_DAY) wet += w; else dry += w; });
+    const wetL = per.filter(x => x.p >= WET_DAY), dryL = per.filter(x => x.p < WET_DAY);
+    const call = wet > dry ? 'rain' : dry > wet ? 'dry' : 'mixed';
+    const group = call === 'rain' ? wetL : call === 'dry' ? dryL : (wetL.length >= dryL.length ? wetL : dryL);
+    const dissent = call === 'mixed' ? [] : per.filter(x => !group.includes(x)).map(x => x.id);
+    const hiMed = median(per.map(x => x.hi));
+    const winds = per.filter(x => x.w != null).map(x => x.w);
+    return {
+      date, di, ok:true, n:per.length, per, call, dissent,
+      agree: group.length,
+      wetN: wetL.length,
+      rainMm: mean((call === 'rain' ? wetL : per).map(x => x.p)),
+      hi: central(per.map(x => x.hi), ids, W),
+      lo: central(per.map(x => x.lo), ids, W),
+      wind: winds.length ? median(winds) : null,
+      spread: Math.max(...per.map(x => x.hi)) - Math.min(...per.map(x => x.hi)),
+      outliers: per.filter(x => Math.abs(x.hi - hiMed) > 2.5).map(x => x.id)
+    };
+  });
+}
+
+/* ---------- accuracy tracking ---------- */
+function logForecasts(loc, j){
+  const full = store.get('wc_log', {}), key = locKey(loc);
+  const log = full[key] = full[key] || {};
+  if(j.daily.time.length > 1){            // log what each model says for tomorrow (lead = 1 day)
+    const date = j.daily.time[1];
+    MODELS.forEach(m => {
+      const k = date + '|' + m.id;
+      if(log[k]) return;
+      const hi = g(j.daily, 'temperature_2m_max', m.id, 1), p = g(j.daily, 'precipitation_sum', m.id, 1);
+      if(hi != null && p != null) log[k] = {hi, p};
+    });
+  }
+  const cutoff = new Date(Date.now() - 45 * 864e5).toISOString().slice(0, 10);
+  Object.keys(log).forEach(k => { if(k.slice(0, 10) < cutoff) delete log[k]; });
+  store.set('wc_log', full);
+}
+
+async function scoreLog(loc, j){
+  const full = store.get('wc_log', {}), key = locKey(loc), log = full[key] || {};
+  const today = j.daily.time[0];
+  const pending = Object.keys(log).filter(k => k.slice(0, 10) < today && !log[k].scored);
+  if(!pending.length) return false;
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}` +
+    `&daily=temperature_2m_max,precipitation_sum&past_days=14&forecast_days=1&timezone=auto`;
+  const r = await fetch(url); if(!r.ok) return false;
+  const a = await r.json(); if(!a.daily) return false;
+  const accAll = store.get('wc_acc', {}), acc = accAll[key] = accAll[key] || {};
+  let changed = false;
+  pending.forEach(k => {
+    const [date, id] = k.split('|'), i = a.daily.time.indexOf(date);
+    if(i < 0) return;
+    const ah = a.daily.temperature_2m_max[i], ap = a.daily.precipitation_sum[i];
+    if(ah == null || ap == null) return;
+    const e = log[k], s = acc[id] = acc[id] || {n:0, terr:0, hits:0};
+    s.n++; s.terr += Math.abs(e.hi - ah);
+    s.hits += ((e.p >= WET_DAY) === (ap >= WET_DAY)) ? 1 : 0;
+    e.scored = true; changed = true;
+  });
+  if(changed){ store.set('wc_log', full); store.set('wc_acc', accAll); }
+  return changed;
+}
+
+function getWeights(loc){
+  const s = store.get('wc_acc', {})[locKey(loc)] || {};
+  const w = {}; let any = false;
+  MODELS.forEach(m => {
+    const x = s[m.id];
+    if(x && x.n >= MIN_SCORED){ w[m.id] = (0.3 + x.hits / x.n) / (0.5 + x.terr / x.n); any = true; }
+    else w[m.id] = null;
+  });
+  if(!any) return null;
+  const avg = mean(Object.values(w).filter(v => v != null));
+  MODELS.forEach(m => { if(w[m.id] == null) w[m.id] = avg; });
+  return w;
+}
+
+/* ---------- agreement traffic light ---------- */
+// green: everyone agrees on rain and highs are within 3°; red: rain call split or highs >6° apart; otherwise amber
+function agreeLevel(d){
+  if(d.call === 'mixed' || d.spread > 6) return 'r';
+  if(d.agree === d.n && d.spread <= 3) return 'g';
+  return 'a';
+}
+function lamp(lv, label, title){
+  const on = k => lv === k ? 'on' : '';
+  return `<span class="tl" title="${esc(title)}"><span class="lamps"><b class="r ${on('r')}"></b><b class="a ${on('a')}"></b><b class="g ${on('g')}"></b></span>${esc(label)}</span>`;
+}
+
+/* ---------- what to wear (tops only) ---------- */
+const ICON = {'T-shirt':'👕', 'Jumper':'🧶', 'Waterproof':'🧥', 'Umbrella':'☂️'};
+function outfitFor(hs){
+  const hh = hs.filter(h => h.ok && +h.time.slice(11, 13) >= 7 && +h.time.slice(11, 13) < 21);
+  if(!hh.length) return null;
+  const t = mean(hh.map(h => h.t)), wind = mean(hh.map(h => h.wind)), gust = Math.max(...hh.map(h => h.gust));
+  const feels = t - Math.max(0, wind - 8) * 0.2;            // rough wind-chill allowance
+  const rainHrs = hh.filter(h => h.rain).length;
+  const maybe = !rainHrs && hh.some(h => h.wetFrac > 0);    // dry consensus, but a source disagrees
+  const heavy = hh.some(h => h.rain && h.mm >= 2.5);
+  const warm = feels >= 16;
+  const items = [{name: warm ? 'T-shirt' : 'Jumper'}];
+  let note = '';
+  if(rainHrs){
+    if(warm && gust < 30 && !heavy){ items.push({name:'Umbrella'}); note = 'Warm enough for a T-shirt; an umbrella will do for the rain.'; }
+    else { items.push({name:'Waterproof'}); note = warm ? 'Warm, but heavy or gusty rain, so go waterproof rather than an umbrella.' : 'Rain expected, so waterproof on top.'; }
+  } else if(gust >= 30 && !warm){
+    items.push({name:'Waterproof'}); note = 'Dry but gusty; a waterproof doubles as a windbreaker.';
+  } else if(maybe){
+    items.push({name: warm ? 'Umbrella' : 'Waterproof', maybe:true});
+    note = 'Consensus is dry, but some sources show showers, so keep one to hand.';
+  } else {
+    note = warm ? 'Dry and warm.' : 'Dry, but on the cool side.';
+  }
+  if(feels < 5 && !items.some(p => p.name === 'Waterproof')){
+    items.push({name:'Waterproof'}); note = 'Properly cold; a waterproof on top helps cut the wind.';
+  }
+  return {items, note, lo: rnd(Math.min(...hh.map(h => h.t))), hi: rnd(Math.max(...hh.map(h => h.t)))};
+}
+function fitHtml(o){
+  return o.items.map(p => `<span class="piece ${p.maybe ? 'maybe' : ''}">${ICON[p.name]} ${p.name}${p.maybe ? ' (pack it)' : ''}</span>`).join('');
+}
+
+/* ---------- data loading ---------- */
+async function load(){
+  const loc = cur, key = locKey(loc);
+  $('#locname').textContent = loc.name;
+  $('#app').innerHTML = '<div class="card muted">Loading forecasts…</div>';
+  let j = null, offline = null;
+  try{
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}` +
+      `&hourly=temperature_2m,precipitation,wind_speed_10m,wind_gusts_10m` +
+      `&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max` +
+      `&models=${MODELS.map(m => m.id).join(',')}&timezone=auto&forecast_days=7&wind_speed_unit=mph`;
+    const r = await fetch(url);
+    if(!r.ok) throw new Error('HTTP ' + r.status);
+    j = await r.json();
+    if(!j.hourly || !j.daily) throw new Error('Bad response');
+    store.set('wc_cache_' + key, {t:Date.now(), j});
+    logForecasts(loc, j);
+  }catch(e){
+    const c = store.get('wc_cache_' + key, null);
+    if(!c){ $('#app').innerHTML = `<div class="card">Couldn't load forecasts (${esc(e.message)}). Check your connection and try again.</div>`; return; }
+    j = c.j; offline = c.t;
+  }
+  if(cur !== loc) return;                  // location changed while loading
+  state.j = j; state.offline = offline; state.openDay = null;
+  render();
+  if(!offline){
+    scoreLog(loc, j).then(changed => { if(changed && cur === loc) render(); }).catch(() => {});
+  }
+}
+
+/* ---------- rendering ---------- */
+function render(){
+  const j = state.j; if(!j) return;
+  const active = MODELS.map(m => m.id).filter(id => settings.models.includes(id));
+  const weights = getWeights(cur);
+  const W = (settings.weighting && weights) ? weights : null;
+  const hours = buildHours(j, active, W);
+  const days = buildDays(j, active, W);
+  const nowKey = new Date(Date.now() + (j.utc_offset_seconds || 0) * 1000).toISOString().slice(0, 13);
+  let nowIdx = hours.findIndex(h => h.time.slice(0, 13) >= nowKey);
+  if(nowIdx < 0) nowIdx = 0;
+
+  let html = '';
+  if(state.offline){
+    html += `<div class="banner">Offline — showing the forecast saved ${new Date(state.offline).toLocaleString('en-GB', {weekday:'short', hour:'2-digit', minute:'2-digit'})}.</div>`;
+  }
+  if(state.toast) html += `<div class="banner">${esc(state.toast)}</div>`;
+
+  /* now card */
+  const next = hours.slice(nowIdx, nowIdx + 12);
+  const nowH = hours[nowIdx];
+  const rw = windows(next, h => h.rain);
+  let headline, subline = '';
+  if(!nowH || !nowH.ok){ headline = 'Not enough sources'; }
+  else if(rw.length && rw[0].first === 0){ headline = `Rain now, until about ${pad(rw[0].endHr % 24)}:00`; }
+  else if(rw.length){ headline = `Rain likely ${fmtW(rw[0])}`; }
+  else { headline = 'Dry for the next 12 hours'; }
+  const minority = next.find(h => h.ok && !h.rain && h.wetFrac > 0);
+  if(minority){
+    const cnt = Math.round(minority.wetFrac * minority.n);
+    subline = `${cnt} of ${minority.n} sources hint at showers around ${minority.time.slice(11, 16)}.`;
+  }
+  html += `<div class="card"><div class="nowrow"><div><div class="headline">${esc(headline)}</div><div class="muted">${esc(subline)}</div></div>` +
+          `<div class="big">${nowH && nowH.ok ? rnd(nowH.t) + '°' : '–'}</div></div>` +
+          `<div class="strip">` +
+          next.map(h => h.ok
+            ? `<div class="hr" title="${Math.round(h.wetFrac * 100)}% of sources forecast rain"><div class="hl">${h.time.slice(11, 13)}</div><div class="hi">${h.rain ? '💧' : '·'}</div><div>${rnd(h.t)}°</div><div class="bar"><span style="height:${Math.round(h.wetFrac * 100)}%"></span></div><div class="muted">${Math.round(h.wetFrac * 100)}%</div></div>`
+            : `<div class="hr"><div class="hl">${h.time.slice(11, 13)}</div></div>`).join('') +
+          `</div><div class="muted">Bars show the share of sources forecasting rain that hour.</div></div>`;
+
+  /* what to wear card */
+  const fitRows = [
+    ['Today', hours.filter((h, i) => i >= nowIdx && days[0] && h.time.slice(0, 10) === days[0].date)],
+    ['Tomorrow', hours.filter(h => days[1] && h.time.slice(0, 10) === days[1].date)]
+  ].map(([lab, hs]) => {
+    const o = outfitFor(hs); if(!o) return '';
+    return `<div class="fitrow"><b>${lab}</b> <span class="muted">${o.lo}–${o.hi}°</span><div>${fitHtml(o)}</div><div class="muted" style="margin-top:4px">${esc(o.note)}</div></div>`;
+  }).join('');
+  if(fitRows){
+    html += `<div class="card"><h2>What to wear</h2>${fitRows}<div class="muted" style="margin-top:6px">Tops only, for 07:00–21:00, from the consensus temperature, wind and rain.</div></div>`;
+  }
+
+  /* best times card */
+  const A = ACTIVITIES[settings.activity] || ACTIVITIES.none;
+  html += `<div class="card"><h2>Best times</h2><select id="act">` +
+    Object.entries(ACTIVITIES).map(([k, v]) => `<option value="${k}" ${k === settings.activity ? 'selected' : ''}>${v.label}</option>`).join('') +
+    `</select>`;
+  if(A.test && days.length){
+    const todayHrs = hours.filter((h, i) => i >= nowIdx && h.time.slice(0, 10) === days[0].date);
+    const tomHrs = days[1] ? hours.filter(h => h.time.slice(0, 10) === days[1].date) : [];
+    html += '<div class="detail">' + [['Today', todayHrs], ['Tomorrow', tomHrs]].map(([lab, hs]) => {
+      const ws = windows(hs, A.test, 7, 21, A.min || 1);
+      return `<div><b>${lab}:</b> ${ws.length ? ws.map(fmtW).join(', ') : 'no good window'}</div>`;
+    }).join('') + '<div class="muted">Daytime hours only (07:00–21:00), using the consensus of your selected sources.</div></div>';
+  }
+  html += '</div>';
+
+  /* 7-day list */
+  html += '<div class="card"><h2>7-day consensus</h2>';
+  days.forEach((d, i) => {
+    const label = dayLabel(d.date, i);
+    if(!d.ok){
+      html += `<div class="day"><div class="dh"><div class="dn">${label}</div><div class="muted">Not enough sources reach this far</div></div></div>`;
+      return;
+    }
+    const icon = d.call === 'rain' ? '☔' : d.call === 'mixed' ? '🌦' : '🌤';
+    const verdict = d.call === 'rain' ? `Rain · ${fmtMm(d.rainMm)}` : d.call === 'mixed' ? 'Split: rain or dry' : 'Dry';
+    const lv = agreeLevel(d);
+    const lvText = {g:'Sources agree', a:'Some disagreement', r:'Sources split'}[lv];
+    const lbl = (d.call === 'mixed' ? `${d.wetN}/${d.n} say rain` : `${d.agree}/${d.n} agree`) + (d.spread > 3 ? ` · ${rnd(d.spread)}° spread` : '');
+    html += `<div class="day" data-day="${i}"><div class="dh"><div class="dn">${label}</div>` +
+      `<div class="dv">${icon} ${verdict}${lamp(lv, lbl, lvText)}` +
+      (d.n < 3 ? `<span class="chip warn">only ${d.n} sources</span>` : '') +
+      (i >= 4 ? `<span class="chip">long range</span>` : '') + `</div>` +
+      `<div class="dt">${rnd(d.hi)}° / ${rnd(d.lo)}°</div></div>`;
+    if(state.openDay === i){
+      html += `<div class="detail"><table><tr><th>Source</th><th>High</th><th>Low</th><th>Rain</th><th>Wind</th></tr>` +
+        active.map(id => {
+          const x = d.per.find(p => p.id === id);
+          if(!x) return `<tr><td>${MODEL_NAME[id]}</td><td colspan="4" class="muted" style="text-align:right">no data</td></tr>`;
+          const dis = d.dissent.includes(id);
+          return `<tr class="${dis ? 'dis' : ''}"><td>${MODEL_NAME[id]}</td>` +
+            `<td class="${d.outliers.includes(id) ? 'out' : ''}">${rnd(x.hi, 1)}°</td><td>${rnd(x.lo, 1)}°</td>` +
+            `<td>${dis ? '⚠ ' : ''}${fmtMm(x.p)}</td><td>${x.w != null ? rnd(x.w) + ' mph' : '–'}</td></tr>`;
+        }).join('') + `</table>`;
+      const dayHrs = hours.filter(h => h.time.slice(0, 10) === d.date);
+      const dw = windows(dayHrs, h => h.rain);
+      const fo = outfitFor(dayHrs);
+      html += (fo ? `<div style="margin-top:4px">${fitHtml(fo)}</div>` : '') + `<div class="muted" style="margin-top:6px">` +
+        (dw.length ? `Rain window: ${dw.map(fmtW).join(', ')}.` : 'No hours with majority rain.') +
+        (d.dissent.length ? ` Differs from the majority: ${d.dissent.map(id => MODEL_NAME[id]).join(', ')}.` : '') +
+        (d.outliers.length ? ` Temperature outlier: ${d.outliers.map(id => MODEL_NAME[id]).join(', ')}.` : '') +
+        ` High-temperature spread ${rnd(d.spread, 1)}°.</div></div>`;
+    }
+    html += '</div>';
+  });
+  html += '<div class="muted" style="margin-top:8px">Lights: green = every source agrees on rain and highs are within 3°; amber = a source disagrees, or highs are 3–6° apart; red = rain call is split, or highs are more than 6° apart.</div>';
+  html += '<div class="muted" style="margin-top:6px">Tap a day to see each source. Rain call uses ≥1 mm for the day; shown rain amount is the average of the agreeing sources; temperatures are the median (or accuracy-weighted mean).</div></div>';
+
+  /* accuracy */
+  html += renderAccuracy(weights);
+
+  /* settings */
+  html += `<div class="card"><h2>Sources</h2>` +
+    MODELS.map(m => `<label class="row"><input type="checkbox" data-model="${m.id}" ${settings.models.includes(m.id) ? 'checked' : ''}> ${m.name}</label>`).join('') +
+    `<div class="muted">At least 3 sources must stay selected. Each is an independent forecast model, so agreement means something.</div>` +
+    `<label class="row" style="margin-top:8px"><input type="checkbox" id="wt" ${settings.weighting && weights ? 'checked' : ''} ${weights ? '' : 'disabled'}> Weight sources by their local track record</label>` +
+    (weights ? '' : `<div class="muted">Unlocks after ${MIN_SCORED}+ days of checked forecasts for this location.</div>`) +
+    `</div>`;
+
+  $('#app').innerHTML = html;
+  state.toast = '';
+}
+
+function renderAccuracy(weights){
+  const acc = store.get('wc_acc', {})[locKey(cur)] || {};
+  const log = store.get('wc_log', {})[locKey(cur)] || {};
+  const waiting = Object.values(log).filter(e => !e.scored).length;
+  const rows = MODELS.map(m => {
+    const x = acc[m.id];
+    return x && x.n
+      ? `<tr><td>${m.name}</td><td>${x.n}</td><td>${rnd(x.terr / x.n, 1)}°</td><td>${Math.round(100 * x.hits / x.n)}%</td></tr>`
+      : `<tr><td>${m.name}</td><td>0</td><td>–</td><td>–</td></tr>`;
+  }).join('');
+  return `<div class="card"><h2>Accuracy tracker</h2>` +
+    `<div class="muted">Each time you open the app it records what every source predicts for tomorrow, then checks it against what actually happened.</div>` +
+    `<table><tr><th>Source</th><th>Days</th><th>Avg high error</th><th>Rain right</th></tr>${rows}</table>` +
+    `<div class="muted" style="margin-top:6px">${waiting} forecast${waiting === 1 ? '' : 's'} waiting to be checked. ` +
+    (weights ? 'Enough history to weight sources.' : `Needs ${MIN_SCORED}+ checked days per source before it affects the consensus.`) +
+    ` Open the app at least once every couple of weeks so no days are missed.</div></div>`;
+}
+
+/* ---------- events ---------- */
+$('#app').addEventListener('click', e => {
+  const d = e.target.closest('[data-day]');
+  if(d && !e.target.closest('select,input,label')){ const i = +d.dataset.day; state.openDay = state.openDay === i ? null : i; render(); }
+});
+$('#app').addEventListener('change', e => {
+  const t = e.target;
+  if(t.id === 'act'){ settings.activity = t.value; store.set('wc_settings', settings); render(); }
+  else if(t.id === 'wt'){ settings.weighting = t.checked; store.set('wc_settings', settings); render(); }
+  else if(t.dataset.model){
+    const set = new Set(settings.models);
+    if(t.checked) set.add(t.dataset.model); else set.delete(t.dataset.model);
+    if(set.size < 3){ state.toast = 'Keep at least 3 sources selected so there is always a majority.'; render(); return; }
+    settings.models = MODELS.map(m => m.id).filter(id => set.has(id));
+    store.set('wc_settings', settings); render();
+  }
+});
+
+function setLoc(l){
+  cur = l; store.set('wc_cur', cur);
+  renderChips(); load();
+}
+function renderChips(){
+  $('#chips').innerHTML = saved.map((l, i) =>
+    `<span class="lc ${locKey(l) === locKey(cur) ? 'on' : ''}"><button data-go="${i}">${esc(l.name)}</button>` +
+    (saved.length > 1 ? `<button class="x" data-rm="${i}" aria-label="Remove ${esc(l.name)}">×</button>` : '') + `</span>`).join('');
+}
+$('#chips').addEventListener('click', e => {
+  const b = e.target.closest('button'); if(!b) return;
+  if(b.dataset.go !== undefined){ setLoc(saved[+b.dataset.go]); }
+  else if(b.dataset.rm !== undefined){
+    const [removed] = saved.splice(+b.dataset.rm, 1);
+    store.set('wc_locs', saved);
+    if(locKey(removed) === locKey(cur)) setLoc(saved[0]); else renderChips();
+  }
+});
+
+$('#sf').addEventListener('submit', async e => {
+  e.preventDefault();
+  const q = $('#q').value.trim(); if(!q) return;
+  const box = $('#results'); box.innerHTML = '<div class="muted">Searching…</div>';
+  try{
+    const r = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=5&language=en&format=json`);
+    const res = (await r.json()).results || [];
+    if(!res.length){ box.innerHTML = '<div class="muted">No places found.</div>'; return; }
+    box.innerHTML = res.map((p, i) =>
+      `<button data-i="${i}">${esc(p.name)}${p.admin1 ? ', ' + esc(p.admin1) : ''}${p.country ? ' — ' + esc(p.country) : ''}</button>`).join('');
+    box.onclick = ev => {
+      const b = ev.target.closest('button'); if(!b) return;
+      const p = res[+b.dataset.i];
+      const loc = {name:`${p.name}${p.admin1 ? ', ' + p.admin1 : ''}`, lat:p.latitude, lon:p.longitude};
+      if(!saved.some(s => locKey(s) === locKey(loc))){ saved.push(loc); store.set('wc_locs', saved); }
+      box.innerHTML = ''; $('#q').value = '';
+      setLoc(loc);
+    };
+  }catch(err){ box.innerHTML = '<div class="muted">Search failed — check your connection.</div>'; }
+});
+
+$('#geo').addEventListener('click', () => {
+  if(!navigator.geolocation){ $('#results').innerHTML = '<div class="muted">Location isn\'t available on this device.</div>'; return; }
+  navigator.geolocation.getCurrentPosition(
+    pos => setLoc({name:'My location', lat:pos.coords.latitude, lon:pos.coords.longitude}),
+    () => { $('#results').innerHTML = '<div class="muted">Couldn\'t get your location — check permissions.</div>'; },
+    {timeout:10000}
+  );
+});
+
+renderChips();
+load();
+</script>
+</body>
+</html>
